@@ -1,6 +1,3 @@
-//
-// Created by 船宝儿 on 2020/5/9.
-//
 
 #include "aes.h"
 
@@ -28,10 +25,7 @@ uint8_t mul(uint8_t scalar, uint8_t s){
     }
     return (uint8_t)p;
 }
-//
-//static void AddRoundKey(uint8_t *state, uint8_t *round_key){
-//
-//}
+
 
 /*
  * the leftmost 4 bits of the byte are used as a row value
@@ -49,6 +43,7 @@ static void substitute(uint8_t *state, int inv){
     }
 }
 
+
 /*
  * the shift row transformation is more substantial than it may first appear;
  * this is because the State is treated as an array of four 4-byte columns;
@@ -57,7 +52,6 @@ static void substitute(uint8_t *state, int inv){
  * 使原来单列中的4byte分布到了4列中
  */
 static void ShiftRows(uint8_t *state){
-    // 这里没想到好的方法
     uint8_t temp[16];
     uint8_t i;
     temp[0] = state[0];
@@ -144,6 +138,109 @@ void inv_MixColumns(uint8_t *state){
     temp[11] = mul(0x0b, state[8]) ^ mul(0x0d, state[9]) ^ mul(0x09, state[10]) ^ mul(0x0e, state[11]);
     temp[15] = mul(0x0b, state[12]) ^ mul(0x0d, state[13]) ^ mul(0x09, state[14]) ^ mul(0x0e, state[15]);
     for(i = 0;i < 16;i++)state[i] = temp[i];
+}
+
+/*
+ * precomp round key
+ * use 16*n memory
+ */
+
+void key_expansion(uint8_t *seed, word *keys){
+    uint8_t i, j;
+    uint8_t row, col;
+    uint8_t round_constant = 1;
+    for(i = 0;i < 4;i++){
+        for(j = 0;j < 4;j++){
+            keys[i][j] = seed[i*4+j];
+        }
+    }
+    for(i = 4;i < 44;i++){
+        if (i % 4 == 0){
+            //RotWord
+            for(j = 0;j < 4;j++){
+                keys[i][j] = keys[i-1][(j+1)%4];
+            }
+            //SubWord
+            for(j = 0;j < 4;j++){
+                row = keys[i][j] >> 4;
+                col = (keys[i][j] & 0x0f);
+                keys[i][j] = s_box[row*16+col];
+            }
+            //add RCon
+            keys[i][0] ^= round_constant;
+            if (round_constant & 0x80)round_constant = (round_constant << 1) ^ 0x1b;
+            else round_constant <<= 1;
+            // add w[i-4]
+            for(j = 0;j < 4;j++)keys[i][j] ^= keys[i-4][j];
+        }
+        else {
+            for(j = 0;j < 4;j++){
+                keys[i][j] = keys[i-1][j] ^ keys[i-4][j];
+            }
+        }
+    }
+}
+
+static void add_Round_key(uint8_t *state, const uint8_t *round_key){
+    unsigned i;
+    for (i = 0;i < 16;i++)state[i] ^= round_key[i];
+}
+
+
+// single block encrypt
+void encrypt(uint8_t *plaintext, uint8_t *seed_key){
+    unsigned i, j, k;
+    word keys[44];
+    uint8_t round_key[16];
+    key_expansion(seed_key, keys);
+    add_Round_key(plaintext, seed_key);
+    // printf("\n--------------add_init_key----------------\n");
+    // for(i = 0;i < 16;i++)printf("%02x", plaintext[i]);
+    for (i = 0;i < 10;i++){
+        // printf("\n--------------round_%d----------------\n", i+1);
+        for(j = 0;j < 4;j++){
+            for (k = 0;k < 4;k++){
+                round_key[j*4+k] = keys[4+4*i+j][k];
+            }
+        }
+        substitute(plaintext, 0);
+        ShiftRows(plaintext);
+        // last round don't have mix column
+        if (i != 9)MixColumns(plaintext);
+        add_Round_key(plaintext, round_key);
+        // for(j = 0;j < 16;j++)printf("%02x", plaintext[j]);
+    }
+}
+
+void decrypt(uint8_t *cipher, uint8_t *seed_key){
+    unsigned i, j, k;
+    word keys[44];
+    uint8_t round_key[16];
+    key_expansion(seed_key, keys);
+    for (i = 0;i < 4;i++){
+        for (j = 0;j < 4;j++){
+            round_key[i*4+j] = keys[40+i][j];
+        }
+    }
+    add_Round_key(cipher, round_key);
+    // printf("\n--------------add_init_key----------------\n");
+    // for(i = 0;i < 16;i++)printf("%02x", cipher[i]);
+    for (i = 0;i < 10;i++){
+        // printf("\n--------------round_%d----------------\n", i+1);
+        for(j = 0;j < 4;j++){
+            for (k = 0;k < 4;k++){
+                round_key[j*4+k] = keys[36-i*4+j][k];
+                // printf("%02x", keys[36-i*4+j][k]);
+            }
+        }
+        // printf("\n");
+        inv_ShiftRows(cipher);
+        substitute(cipher, 1);
+        add_Round_key(cipher, round_key);
+        // last round don't have mix column
+        if (i != 9)inv_MixColumns(cipher);
+        // for(j = 0;j < 16;j++)printf("%02x", cipher[j]);
+    }
 }
 
 

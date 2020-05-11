@@ -1,10 +1,10 @@
-//
-// Created by 船宝儿 on 2020/5/9.
-//
+
 
 #ifndef AES_AES_H
 #define AES_AES_H
+// #include <stdio.h>
 #define uint8_t unsigned char
+typedef uint8_t word[4] ;
 
 #endif //AES_AES_H
 
@@ -50,3 +50,6 @@ static uint8_t inv_s_box[256] = {
 void MixColumns(uint8_t *state);
 void inv_MixColumns(uint8_t *state);
 uint8_t mul(uint8_t scalar, uint8_t s);
+void key_expansion(uint8_t *seed, word *keys);
+void encrypt(uint8_t *plaintext, uint8_t *seed_key);
+void decrypt(uint8_t *cipher, uint8_t *seed_key);
