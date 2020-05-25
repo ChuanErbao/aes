@@ -39,8 +39,20 @@ void test_encrypt(){
     for (i = 0;i < 16;i++)printf("%02x", plaintext[i]);
 }
 
+void cbc_encrypt(){
+    uint8_t i;
+    uint8_t plaintext[16] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10};
+    int length = sizeof(plaintext);
+    int padded = (length/16+1)*16;
+    uint8_t cipher[padded];
+    uint8_t seed_key[16] = {0x0f, 0x15, 0x71, 0xc9, 0x47, 0xd9, 0xe8, 0x59, 0x0c, 0xb7, 0xad, 0xd6, 0xaf, 0x7f, 0x67, 0x98};
+    printf("\n*****************test encrypt******************\n");
+    aes_cbc_encrypt(plaintext, seed_key, cipher, length, padded);
+    printf("\nencrypted: ");
+    for (i = 0;i < padded;i++)printf("%02x", cipher[i]);
+}
+
+
 int main() {
-    // key expansion checked
-    test_encrypt();
-    return 0;
+    cbc_encrypt();
 }

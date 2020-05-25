@@ -3,6 +3,8 @@
 #ifndef AES_AES_H
 #define AES_AES_H
 // #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #define uint8_t unsigned char
 typedef uint8_t word[4] ;
 
@@ -51,5 +53,8 @@ void MixColumns(uint8_t *state);
 void inv_MixColumns(uint8_t *state);
 uint8_t mul(uint8_t scalar, uint8_t s);
 void key_expansion(uint8_t *seed, word *keys);
+void add_Round_key(uint8_t *state, const uint8_t *round_key);
 void encrypt(uint8_t *plaintext, uint8_t *seed_key);
 void decrypt(uint8_t *cipher, uint8_t *seed_key);
+uint8_t *getIV();
+void aes_cbc_encrypt(uint8_t *plaintext, uint8_t *seed_key, uint8_t *cipher, int length, int padded);
